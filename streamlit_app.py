@@ -12,8 +12,9 @@ forums](https://discuss.streamlit.io).
 
 In the meantime, below is an example of what you can do with just a few lines of code:
 """
-import psycopg2
-
+st.sidebar.write("Installing required dependencies...")
+st.sidebar.code("!pip install psycopg2-binary")
+import psycopg2  
 @st.cache_resource
 def init_connection():
     return psycopg2.connect(**st.secrets["postgres"])
