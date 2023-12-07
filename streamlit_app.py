@@ -13,28 +13,45 @@ forums](https://discuss.streamlit.io).
 In the meantime, below is an example of what you can do with just a few lines of code:
 """
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+pip install streamlit psycopg2
+import streamlit as st
+import psycopg2
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+# Function to run SQL queries
+def run_query(query):
+    connection = psycopg2.connect(
+        host='localhost',
+        port='5433',
+        database='postgres',
+        user='postgres',
+        password='SVR-2000'
+    )
+    cursor = connection.cursor()
+    cursor.execute(query)
+    result = cursor.fetchall()
+    connection.close()
+    return result
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+# Streamlit App
+def main():
+    st.title("SQL Query Runner")
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
+    # Input SQL query
+    user_query = st.text_area("Enter your SQL query:", height=200)
 
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+    # Execute query on button click
+    if st.button("Run Query"):
+        if user_query:
+            result = run_query(user_query)
+
+            # Display results
+            if result:
+                st.success("Query executed successfully!")
+                st.table(result)
+            else:
+                st.warning("No results to display.")
+        else:
+            st.warning("Please enter a SQL query.")
+
+if __name__ == "__main__":
+    main()
