@@ -13,44 +13,44 @@ forums](https://discuss.streamlit.io).
 In the meantime, below is an example of what you can do with just a few lines of code:
 """
 
-import streamlit as st
-import psycopg2
+@st.cache_resource
+def init_connection():
+    return psycopg2.connect(**st.secrets["postgres"])
 
-# Function to run SQL queries
-def run_query(query):
-    connection = psycopg2.connect(
-        host='localhost',
-        port='5433',
-        database='postgres',
-        user='postgres',
-        password='SVR-2000'
-    )
-    cursor = connection.cursor()
-    cursor.execute(query)
-    result = cursor.fetchall()
-    connection.close()
-    return result
+conn = init_connection()
 
-# Streamlit App
-def main():
-    st.title("SQL Query Runner")
+def get_data(query):
+    with conn.cursor() as cur:
+        cur.execute(query)
+        data = cur.fetchall()
+        # Convert the query results to a pandas DataFrame
+        df = pd.DataFrame(data, columns=[desc[0] for desc in cur.description])
+        return df
+# Use Streamlit to display the retrieved data
+st.header("Retail Database")
+st.write("Enter a query to retrieve data from the database:")
 
-    # Input SQL query
-    user_query = st.text_area("Enter your SQL query:", height=200)
+query = st.text_input("Query:")
+if query:
+    df = get_data(query)
+    if not df.empty:
+        st.dataframe(df)
+    else:
+        st.write("No data found.")
+# Retrieve all table names from the database
+with conn.cursor() as cur:
+    cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';")
+    table_names = [name[0] for name in cur.fetchall()]
 
-    # Execute query on button click
-    if st.button("Run Query"):
-        if user_query:
-            result = run_query(user_query)
+# Display a dropdown menu with the table names
+table_name = st.selectbox("Select the table Name:", table_names)
 
-            # Display results
-            if result:
-                st.success("Query executed successfully!")
-                st.table(result)
-            else:
-                st.warning("No results to display.")
-        else:
-            st.warning("Please enter a SQL query.")
-
-if __name__ == "__main__":
-    main()
+# If a table has been selected, display the data in a dataframe
+if table_name:
+    st.write(f"Displaying data from table: {table_name}")
+    query = f"SELECT * FROM {table_name}"
+    df = get_data(query)
+    if not df.empty:
+        st.dataframe(df)
+    else:
+        st.write("No data found.")
